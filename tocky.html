@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Slot Automat - Zkoušení</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Segoe UI, sans-serif;
+      background: radial-gradient(circle, #0f2027, #203a43, #2c5364);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      background: #111;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px gold;
+      width: 420px;
+      position: relative;
+      z-index: 10;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-shadow: 0 0 10px cyan;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      outline: none;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      background: linear-gradient(45deg, #ffd000, #ff7b00);
+      font-weight: bold;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    .machine {
+      margin-top: 20px;
+      padding: 25px;
+      border-radius: 15px;
+      background: #222;
+      box-shadow: 0 0 20px red inset;
+      position: relative;
+    }
+
+    .window {
+      height: 120px;
+      overflow: hidden;
+      background: #333;
+      color: white;
+      border-radius: 10px;
+      font-size: 28px;
+      font-weight: bold;
+      position: relative;
+    }
+
+    /* Pointer styl uvnitř okénka (směřující dovnitř) */
+    .pointer-left {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+      border-left: 20px solid #fff;
+      z-index: 10;
+      filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
+    }
+
+    .pointer-right {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+      border-right: 20px solid #fff;
+      z-index: 10;
+      filter: drop-shadow(-2px 2px 2px rgba(0, 0, 0, 0.5));
+    }
+
+    .reel {
+      position: absolute;
+      width: 100%;
+      top: 0;
+      left: 0;
+    }
+
+    .item {
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      color: white;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+      border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .result {
+      margin-top: 15px;
+      font-size: 26px;
+      font-weight: bold;
+      text-shadow: 0 0 10px yellow;
+      min-height: 35px;
+    }
+
+    .names {
+      margin-top: 20px;
+      max-height: 150px;
+      overflow: auto;
+    }
+
+    /* Scrollbar pro names */
+    .names::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .names::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    .names::-webkit-scrollbar-track {
+      background: #222;
+    }
+
+    .nameItem {
+      padding: 8px;
+      margin: 4px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .nameItem span {
+      margin-left: 10px;
+      font-weight: bold;
+    }
+
+    .nameItem button {
+      padding: 4px 10px;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .nameItem button:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Winner Overlay Styles */
+    #winnerOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      overflow: hidden;
+    }
+
+    #winnerOverlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #sunburst {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200vmax;
+      height: 200vmax;
+      margin-top: -100vmax;
+      margin-left: -100vmax;
+      background: repeating-conic-gradient(from 0deg, transparent 0deg 15deg, rgba(255,255,255,0.08) 15deg 30deg);
+      animation: rotateSunburst 30s linear infinite;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1s;
+    }
+
+    #winnerOverlay.active #sunburst {
+      opacity: 1;
+    }
+
+    @keyframes rotateSunburst {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    #effectCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #winnerText {
+      font-size: 12vw;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 20px #fff, 0 0 40px #ff00ff, 0 0 60px #00ffff, 0 0 80px #00ffff;
+      transform: scale(0.1) translateY(100px);
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 10001;
+      text-align: center;
+      word-wrap: break-word;
+      padding: 0 20px;
+    }
+
+    #winnerOverlay.active #winnerText {
+      transform: scale(1) translateY(0);
+    }
+
+    .closeTip {
+      margin-top: 40px;
+      color: #ccc;
+      font-size: 20px;
+      z-index: 10001;
+      opacity: 0;
+      transition: opacity 1s 2s;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+
+    .closeTip:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    #winnerOverlay.active .closeTip {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>🎰 Slot Automat</h1>
+
+    <input id="nameInput" placeholder="Zadej jméno" onkeypress="if(event.key==='Enter')addName()">
+    <button onclick="addName()">Přidat</button>
+
+    <div class="machine">
+      <div class="window">
+        <div class="pointer-left"></div>
+        <div class="pointer-right"></div>
+        <div class="reel" id="reel"></div>
+      </div>
+
+      <br>
+      <button onclick="spin()" style="margin-top: 5px; font-size: 20px; padding: 15px 30px;">TOČIT</button>
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="names" id="namesList"></div>
+  </div>
+
+  <div id="winnerOverlay" onclick="closeWinner()">
+    <div id="sunburst"></div>
+    <canvas id="effectCanvas"></canvas>
+    <div id="winnerText"></div>
+    <div class="closeTip" onclick="closeWinner(event)">Klikni pro zavření</div>
+  </div>
+
+  <script>
+    let names = JSON.parse(localStorage.getItem("names")) || [];
+    let spinning = false;
+
+    // Pomocná funkce pro vygenerování unikátní barvy pro konkrétní jméno (stejné jméno má vždy stejnou barvu)
+    function getColorForName(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      // Vytvoříme živější barvy pomocí HSL (Hue = hash mod 360, Saturation = 70-100%, Lightness = 40-60%)
+      const h = Math.abs(hash) % 360;
+      return `hsl(${h}, 85%, 50%)`;
+    }
+
+    function save() { localStorage.setItem("names", JSON.stringify(names)); }
+
+    function addName() {
+      let input = document.getElementById("nameInput");
+      if (input.value.trim() === "") return;
+      names.push(input.value.trim());
+      input.value = "";
+      save();
+      updateList();
+      renderReel();
+    }
+
+    function removeName(i) {
+      names.splice(i, 1);
+      save();
+      updateList();
+      renderReel();
+    }
+
+    function updateList() {
+      let list = document.getElementById("namesList");
+      list.innerHTML = "";
+      names.forEach((name, i) => {
+        let div = document.createElement("div");
+        div.className = "nameItem";
+        div.style.background = getColorForName(name); // Přidání barvy
+        div.innerHTML = `<span>${name}</span><button onclick="removeName(${i})">X</button>`;
+        list.appendChild(div);
+      });
+    }
+
+    function renderReel() {
+      let reel = document.getElementById("reel");
+      reel.innerHTML = "";
+      if (names.length === 0) return;
+
+      // Přidáme jména několikrát za sebou, aby bylo možné točit dostatečně dlouho (cca 40x opakování pole)
+      for (let i = 0; i < 40; i++) {
+        names.forEach(name => {
+          let div = document.createElement("div");
+          div.className = "item";
+          div.innerText = name;
+          div.style.background = getColorForName(name); // Přidání barvy na válec
+          reel.appendChild(div);
+        });
+      }
+
+      // resetovat pozici, aby nespadl dolů před točením
+      reel.style.transition = 'none';
+      reel.style.transform = `translateY(0)`;
+    }
+
+    function spin() {
+      if (spinning || names.length === 0) return;
+      spinning = true;
+      document.getElementById("result").innerText = "";
+
+      let reel = document.getElementById("reel");
+      let itemHeight = 120;
+
+      // Náhodný výherce (index v rámci jednoho bloku names)
+      let winnerIndex = Math.floor(Math.random() * names.length);
+      let winnerName = names[winnerIndex];
+
+      // Počet smyček před zastavením. Zajistíme např. přesně 20 opakování celého seznamu.
+      let loops = 20;
+
+      // Cílový index prvku, na který se má zastavit
+      let targetChildIndex = (loops * names.length) + winnerIndex;
+
+      // Cílová pozice posunu (zaporny Y transform)
+      let targetPosition = targetChildIndex * itemHeight;
+
+      // Rychle vrátit na 0 bez animace (kdyby už točil předtím)
+      reel.style.transition = 'none';
+      reel.style.transform = `translateY(0px)`;
+
+      // Vynutit překreslení prohlížečem, aby se aplikovala resetovaná pozice
+      reel.offsetHeight;
+
+      // Plynulá animace (CSS transition)
+      let spinDuration = 6000; // 6 sekund
+
+      // Nastavíme CSS cubic-bezier, který ze začátku zrychlí a nakonec hodně pomalu dojíždí
+      reel.style.transition = `transform ${spinDuration}ms cubic-bezier(0.1, 0.8, 0, 1)`;
+      reel.style.transform = `translateY(-${targetPosition}px)`;
+
+      // Počkáme až se dotočí
+      setTimeout(() => {
+        let resultEl = document.getElementById("result");
+        resultEl.innerText = `${winnerName} jde na zkoušení!`;
+        resultEl.style.color = getColorForName(winnerName);
+        showWinner(winnerName, getColorForName(winnerName));
+        spinning = false;
+      }, spinDuration + 200);
+    }
+
+    // === MEGASuper JACKPOT EFEKTY PŘES CANVAS ===
+    let fallingParticles = [];
+    let fireworkParticles = [];
+    let effectCtx;
+    let effectCanvas;
+    let animationFrameId;
+
+    function initEffect() {
+      effectCanvas = document.getElementById('effectCanvas');
+      effectCtx = effectCanvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    function resizeCanvas() {
+      effectCanvas.width = window.innerWidth;
+      effectCanvas.height = window.innerHeight;
+    }
+
+    const confettiColors = ['#ff726d', '#b48def', '#f4306d', '#42A5F5', '#66BB6A', '#FFA726', '#FFFFFF'];
+
+    function createFirework(x, y) {
+      let count = 100 + Math.random() * 50;
+      for (let i = 0; i < count; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let speed = Math.random() * 6 + 2;
+        fireworkParticles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          radius: Math.random() * 3 + 1.5,
+          color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+          alpha: 1,
+          decay: Math.random() * 0.015 + 0.01
+        });
+      }
+    }
+
+    function createFallingParticles(winnerName, winnerColor) {
+      fallingParticles = [];
+      for (let i = 0; i < 200; i++) {
+        let rand = Math.random();
+        let type = 'confetti';
+        if (rand > 0.85) type = 'name';
+        else if (rand > 0.4) type = 'coin';
+
+        fallingParticles.push({
+          type: type,
+          text: winnerName,
+          textColor: winnerColor,
+          x: Math.random() * effectCanvas.width,
+          y: Math.random() * effectCanvas.height - effectCanvas.height * 1.5,
+          size: type === 'coin' ? (Math.random() * 8 + 12) : (type === 'name' ? (Math.random() * 20 + 20) : Math.random() * 10 + 6),
+          h: type === 'confetti' ? (Math.random() * 15 + 10) : 0,
+          color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+          vy: Math.random() * 4 + 2,
+          vx: Math.random() * 3 - 1.5,
+          rotateSpeed: Math.random() * 0.1 - 0.05,
+          angle: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function loopEffect() {
+      // Zanechání stopy (trail) pro ohňostroje
+      effectCtx.globalCompositeOperation = 'destination-out';
+      effectCtx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      effectCtx.fillRect(0, 0, effectCanvas.width, effectCanvas.height);
+      
+      effectCtx.globalCompositeOperation = 'source-over';
+      
+      // Ohňostroj (kreslíme za penězi)
+      for (let i = fireworkParticles.length - 1; i >= 0; i--) {
+        let p = fireworkParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08; // gravitace
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          fireworkParticles.splice(i, 1);
+          continue;
+        }
+
+        effectCtx.beginPath();
+        effectCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        effectCtx.fillStyle = p.color;
+        effectCtx.globalAlpha = p.alpha;
+        effectCtx.fill();
+        effectCtx.globalAlpha = 1;
+      }
+
+      // Padající částice
+      for (let i = 0; i < fallingParticles.length; i++) {
+        let p = fallingParticles[i];
+        p.y += p.vy;
+        p.x += p.vx;
+        p.angle += p.rotateSpeed;
+
+        if (p.y > effectCanvas.height + 50) {
+          p.y = -50;
+          p.x = Math.random() * effectCanvas.width;
+          p.vy = Math.random() * 4 + 2;
+        }
+
+        effectCtx.save();
+        effectCtx.translate(p.x, p.y);
+        
+        // 3D rotace docílená přeškálováním osy Y
+        let scaleY = Math.sin(p.angle);
+        
+        if (p.type === 'coin') {
+          effectCtx.scale(1, Math.abs(scaleY));
+          effectCtx.beginPath();
+          effectCtx.arc(0, 0, p.size, 0, Math.PI * 2);
+          effectCtx.fillStyle = "#FFD700";
+          effectCtx.fill();
+          effectCtx.lineWidth = 1;
+          effectCtx.strokeStyle = "#DAA520";
+          effectCtx.stroke();
+          
+          effectCtx.beginPath();
+          effectCtx.arc(0, 0, p.size * 0.65, 0, Math.PI * 2);
+          effectCtx.stroke();
+        } else if (p.type === 'name') {
+          effectCtx.rotate(p.angle);
+          effectCtx.fillStyle = p.textColor;
+          effectCtx.font = "900 " + p.size + "px 'Segoe UI', sans-serif";
+          effectCtx.textAlign = "center";
+          effectCtx.textBaseline = "middle";
+          effectCtx.shadowColor = "rgba(255,255,255,0.5)";
+          effectCtx.shadowBlur = 10;
+          effectCtx.fillText(p.text, 0, 0);
+        } else {
+          effectCtx.rotate(p.angle);
+          effectCtx.scale(1, Math.abs(scaleY));
+          effectCtx.fillStyle = p.color;
+          effectCtx.fillRect(-p.size / 2, -p.h / 2, p.size, p.h);
+        }
+        
+        effectCtx.restore();
+      }
+
+      // Občas přidáme ohňostroj
+      if (Math.random() < 0.05) {
+        createFirework(Math.random() * effectCanvas.width, effectCanvas.height - Math.random() * effectCanvas.height * 0.6);
+      }
+
+      animationFrameId = requestAnimationFrame(loopEffect);
+    }
+
+    function startEffect(winnerName, colorStr) {
+      if (!effectCanvas) initEffect();
+      fireworkParticles = [];
+      createFallingParticles(winnerName, colorStr);
+      createFirework(effectCanvas.width / 2, effectCanvas.height / 2); // Velký počáteční ohňostroj
+      loopEffect();
+    }
+
+    function stopEffect() {
+      cancelAnimationFrame(animationFrameId);
+      if (effectCtx) {
+        effectCtx.clearRect(0, 0, effectCanvas.width, effectCanvas.height);
+      }
+    }
+
+    function showWinner(name, colorStr) {
+      let overlay = document.getElementById("winnerOverlay");
+      let text = document.getElementById("winnerText");
+      
+      text.innerText = name;
+      text.style.textShadow = `0 0 20px #fff, 0 0 40px ${colorStr}, 0 0 60px ${colorStr}, 0 0 80px ${colorStr}`;
+      overlay.classList.add("active");
+      
+      // Předáme jméno i barvu do efektů
+      startEffect(name, colorStr);
+    }
+
+    function closeWinner(e) {
+      if (e) e.stopPropagation();
+      document.getElementById("winnerOverlay").classList.remove("active");
+      stopEffect();
+    }
+
+    updateList();
+    renderReel();
+  </script>
+</body>
+
+</html>
